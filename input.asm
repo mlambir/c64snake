@@ -1,19 +1,12 @@
 .const keyPressed = $cb 	// scnkey puts code of held key here.
-.const INPUTDELAY = 10	 	// update delay between input checks. in frames
 
+.const UP = $09 			// w
+.const LEFT = $0A 			// a
+.const DOWN = $0D	 		// s
+.const RIGHT = $12	 		// d
 
-// keycodes to check for in inputResult values
-// valid controls are also used for joystick results.
-.const LEFT = 47 			// , <
-.const RIGHT = 44	 		// . >
-.const UP = 45 			    // , <
-.const DOWN = 46	 		// . >
-.const TURNCOUNTER = 10		// A
-.const TURNCLOCK = 13	 	// S
-.const PAUSE = 41 			// P
-.const RESET = 4	 		// F1
-.const CHANGEBACKGROUND = 5 // F3
-.const CHANGECOLOUR = 6 	// F5
+.const FIRE = $3D			// space
+
 .const NOKEY = 64
 .const NOINPUT = 253		// no input detected
 
@@ -40,39 +33,12 @@ GetInput:
 
 GetKeyInput:
 	lda keyPressed 			// get held key code
-	cmp previousKey 		// is it a different key than before?
-	bne !skip+ 				// yes. dont use key delay
-
-	// key is the same. update delay counter
-	dec keyDelayCounter
-	beq !skip+
-	lda #NOINPUT
-	sta inputResult
-	rts
-!skip:
-	// restore key delay counter
-	ldx #INPUTDELAY
-	stx keyDelayCounter
-	// save key code for next update
-	sta previousKey
 
 	cmp #NOKEY
 	bne !skip+
 	lda #NOINPUT 			// yes
+!skip:
 	sta inputResult
-	rts
-
-!skip:
-	cmp #DOWN
-	bne !skip+
-
-	// if we press down, the delay is shorter
-	ldx #4 // INPUTDELAY / 2
-	stx keyDelayCounter
-
-!skip:
-	sta inputResult 	// store input result
-
 	rts
 
 // -------------------------------------------------
@@ -86,24 +52,8 @@ GetKeyInput:
 .const NOJOY  = $ff 				// value for no joy input
 
 GetJoyInput:
-	lda CIAPRA 				// load the input byte
-	cmp previousJoy 		// same as previous input?
-	bne !skip+ 				// no, so skip delay
-
-	// key is the same. update delay counter
-	dec joyDelayCounter
-	beq !skip+
-	lda #NOINPUT
-	sta inputResult
-	rts
-
 !skip:
-	ldx #INPUTDELAY 		// reset the delay counter
-	stx joyDelayCounter
-
-	sta previousJoy 		// save this input value
-
-
+	lda CIAPRA
 	cmp #NOJOY 				// same as noinput?
 	bne !nextjoy+ 			// no, so go check the possiblities
 
@@ -138,7 +88,7 @@ GetJoyInput:
 !nextjoy:
 	lsr 					// check bit 4: joy fire button
 	bcs !exit+
-	lda #TURNCLOCK
+	lda #FIRE
 	sta inputResult
 !exit:
 	rts 					// those were all the relevant bits.
@@ -150,15 +100,3 @@ GetJoyInput:
 // this byte holds the result of the input query
 inputResult:
 	.byte 0
-
-keyDelayCounter:
-	.byte INPUTDELAY
-
-previousKey:
-	.byte NOINPUT			// previous key held
-
-joyDelayCounter:
-	.byte INPUTDELAY
-
-previousJoy:
-	.byte 255 				// previous joy direction held

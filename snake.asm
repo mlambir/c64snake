@@ -39,7 +39,7 @@ start:
 	jmp game_loop
 
 
-pos: .byte 0,0
+pos: .word $0000
 v_a: .byte 0
 v_x: .byte 0
 v_y: .byte 0
