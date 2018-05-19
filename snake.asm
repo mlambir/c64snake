@@ -19,24 +19,26 @@ loop:
 .const DIR_LEFT = 2
 .const DIR_RIGHT = 3
 
-head_x: .byte 10
-head_y: .byte 10
-tail_x: .byte 10
-tail_y: .byte 11
+.const CLEAR_BYTE = ' '
+
+body_x: .fill 256, 0
+body_y: .fill 256, 0
+head_position: .byte 0
+tail_position: .byte 0 
+head_tail_offset: .byte 0
+
 dir: .byte DIR_UP
 
 
 BasicUpstart2(start)
 
+start:
+	jmp game_start
 wait: 
 	lda #$ff 
 	cmp $d012 
 	bne wait 
 	rts
-
-start:
-	ClearScreen(SCREEN_START, ' ')
-	jmp game_loop
 
 
 pos: .word $0000
@@ -102,6 +104,29 @@ case07:
 case_end:
 	rts
 
+advance_body:
+	ldx head_position
+	ldy head_position
+	inx
+	stx head_position
+	lda body_x,y
+	sta body_x,x
+	lda body_y,y
+	sta body_y,x
+
+	ldx head_tail_offset
+	cpx #0
+	bne dec_offset
+	ldx tail_position
+	inx
+	stx tail_position
+	jmp advance_done
+dec_offset:
+	dex
+	stx head_tail_offset
+advance_done:
+	rts
+
 move:
 	lda dir
 	cmp #DIR_UP
@@ -112,35 +137,43 @@ move:
 	beq move_left
 	cmp #DIR_RIGHT
 	beq move_right
-	rts
+	jmp move_done
 move_left:
-	ldx head_x
-	cpx #0
+	ldx head_position
+	lda body_x, x
+	cmp #0
 	beq move_done
-	dex
-	stx head_x
-	rts
+	jsr advance_body
+	ldx head_position
+	dec body_x, x
+	jmp move_done
 move_right:
-	ldx head_x
-	cpx #39
+	ldx head_position
+	lda body_x, x
+	cmp #39
 	beq move_done
-	inx
-	stx head_x
-	rts
+	jsr advance_body
+	ldx head_position
+	inc body_x, x
+	jmp move_done
 move_up:
-	ldy head_y
-	cpy #0
+	ldx head_position
+	lda body_y, x
+	cmp #0
 	beq move_done
-	dey
-	sty head_y
-	rts
+	jsr advance_body
+	ldx head_position
+	dec body_y, x
+	jmp move_done
 move_down:
-	ldy head_y
-	cpy #24
+	ldx head_position
+	lda body_y, x
+	cmp #24
 	beq move_done
-	iny
-	sty head_y
-	rts
+	jsr advance_body
+	ldx head_position
+	inc body_y, x
+	jmp move_done
 move_done:
 	rts
 
@@ -173,16 +206,56 @@ handle_input:
 !next_key:
 	rts
 
+game_start:
+	ClearScreen(SCREEN_START, CLEAR_BYTE)
+	lda #0
+	sta head_position
+	stx head_position
+	lda #20
+	sta body_x, x
+	lda #12
+	sta body_y, x
+	lda #DIR_UP
+	sta dir
+	lda #10
+	sta head_tail_offset
 game_loop:
-	ldx head_x
-	ldy head_y
-	lda #' '
-	jsr draw_a_on_x_y
 	jsr handle_input
-	jsr move
-	ldx head_x
-	ldy head_y
-	lda #CHR_HEAD
+	
+	ldx tail_position
+	lda body_y, x
+	tay
+	lda body_x, x
+	tax
+	lda #CLEAR_BYTE
 	jsr draw_a_on_x_y
 	jsr wait
+
+	jsr move
+	
+	ldx head_position
+	lda body_y, x
+	tay
+	lda body_x, x
+	tax
+	lda #CHR_HEAD
+	jsr draw_a_on_x_y
+	
+	ldx #$ff
+	jsr delay
+
 	jmp game_loop
+
+
+delay:
+	ldy #0
+yloop:
+	nop
+	nop
+	nop
+	nop
+	dey
+	bne yloop
+	dex
+	bne delay
+	rts
