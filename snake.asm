@@ -229,7 +229,6 @@ game_loop:
 	tax
 	lda #CLEAR_BYTE
 	jsr draw_a_on_x_y
-	jsr wait
 
 	jsr move
 	
@@ -241,7 +240,7 @@ game_loop:
 	lda #CHR_HEAD
 	jsr draw_a_on_x_y
 	
-	ldx #$ff
+	ldx #$55
 	jsr delay
 
 	jmp game_loop
@@ -250,10 +249,6 @@ game_loop:
 delay:
 	ldy #0
 yloop:
-	nop
-	nop
-	nop
-	nop
 	dey
 	bne yloop
 	dex
