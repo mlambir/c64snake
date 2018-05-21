@@ -1,19 +1,7 @@
 .import source "input.asm"
-
-.macro @ClearScreen(target, clearByte) {  
-	ldx #0
-	lda #clearByte
-loop:
-	sta target,x
-	sta target+$100,x
-	sta target+$200,x
-	sta target+40*25-$100,x
-	inx
-	bne loop
-}
+.import source "screen_utils.asm"
 
 .const CHR_HEAD = $51
-.const SCREEN_START = $0400
 .const DIR_UP = 0
 .const DIR_DOWN = 1
 .const DIR_LEFT = 2
@@ -38,70 +26,6 @@ wait:
 	lda #$ff 
 	cmp $d012 
 	bne wait 
-	rts
-
-
-pos: .word $0000
-v_a: .byte 0
-v_x: .byte 0
-v_y: .byte 0
-draw_a_on_x_y:
-run:
-	sta v_a
-	stx v_x
-	sty v_y
-
-	lda #>SCREEN_START
-	sta pos+1
-	//add x to pos
-	stx pos
-
-//add y*40 to pos
-loop:
-	cpy #0
-	beq loop_done
-	dey
-	clc
-	lda pos
-	adc #40
-	sta pos
-	lda pos+1
-	adc #0
-	sta pos+1
-	jmp loop
-loop_done:
-// write to "pos"
-	lda pos+1
-	cmp #$05
-	bcs case05
-	ldx pos
-	lda v_a
-	sta SCREEN_START,x
-	jmp case_end
-case05:
-	lda pos+1
-	cmp #$06
-	bcs case06
-	ldx pos
-	lda v_a
-	sta SCREEN_START+$0100,x
-	jmp case_end
-case06:
-	lda pos+1
-	cmp #$07
-	bcs case07
-	ldx pos
-	lda v_a
-	sta SCREEN_START+$0200,x
-	jmp case_end
-case07:
-	lda pos+1
-	cmp #$08
-	bcs case_end
-	ldx pos
-	lda v_a
-	sta SCREEN_START+$0300,x
-case_end:
 	rts
 
 advance_body:
@@ -139,37 +63,21 @@ move:
 	beq move_right
 	jmp move_done
 move_left:
-	ldx head_position
-	lda body_x, x
-	cmp #0
-	beq move_done
 	jsr advance_body
 	ldx head_position
 	dec body_x, x
 	jmp move_done
 move_right:
-	ldx head_position
-	lda body_x, x
-	cmp #39
-	beq move_done
 	jsr advance_body
 	ldx head_position
 	inc body_x, x
 	jmp move_done
 move_up:
-	ldx head_position
-	lda body_y, x
-	cmp #0
-	beq move_done
 	jsr advance_body
 	ldx head_position
 	dec body_y, x
 	jmp move_done
 move_down:
-	ldx head_position
-	lda body_y, x
-	cmp #24
-	beq move_done
 	jsr advance_body
 	ldx head_position
 	inc body_y, x
@@ -206,11 +114,29 @@ handle_input:
 !next_key:
 	rts
 
+check_collisions:
+	ldx head_position
+	lda body_y, x
+	tay
+	lda body_x, x
+	tax
+	cpx #40
+	bcs lost
+	cpy #25
+	bcs lost
+	jsr read_x_y_to_a
+	sta SCREEN_START
+	cmp #CLEAR_BYTE
+	bne lost
+	rts
+lost:
+	jmp game_start
+
 game_start:
-	ClearScreen(SCREEN_START, CLEAR_BYTE)
+	jsr clear_screen
 	lda #0
 	sta head_position
-	stx head_position
+	stx tail_position
 	lda #20
 	sta body_x, x
 	lda #12
@@ -231,6 +157,8 @@ game_loop:
 	jsr draw_a_on_x_y
 
 	jsr move
+	
+	jsr check_collisions
 	
 	ldx head_position
 	lda body_y, x
