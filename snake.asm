@@ -26,6 +26,7 @@ head_tail_offset: .byte 0
 last_tail_x: .byte 0
 last_tail_y: .byte 0
 
+last_dir: .byte DIR_UP
 dir: .byte DIR_UP
 
 
@@ -74,6 +75,7 @@ advance_done:
 
 move:
 	lda dir
+	sta last_dir
 	cmp #DIR_UP
 	beq move_up
 	cmp #DIR_DOWN
@@ -112,24 +114,36 @@ handle_input:
 	lda inputResult
 	cmp #LEFT
 	bne !next_key+
+	lda last_dir
+	cmp #DIR_RIGHT
+	beq !next_key+
 	lda #DIR_LEFT
 	sta dir
 !next_key:
 	lda inputResult
 	cmp #RIGHT
 	bne !next_key+
+	lda last_dir
+	cmp #DIR_LEFT
+	beq !next_key+
 	lda #DIR_RIGHT
 	sta dir
 !next_key:
 	lda inputResult
 	cmp #UP
 	bne !next_key+
+	lda last_dir
+	cmp #DIR_DOWN
+	beq !next_key+
 	lda #DIR_UP
 	sta dir
 !next_key:
 	lda inputResult
 	cmp #DOWN
 	bne !next_key+
+	lda last_dir
+	cmp #DIR_UP
+	beq !next_key+
 	lda #DIR_DOWN
 	sta dir
 !next_key:
