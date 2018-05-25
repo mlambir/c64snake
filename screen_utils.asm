@@ -15,6 +15,21 @@
 	bne !loop-
 }
 
+.macro @CopyScreen(source, target) {  
+	ldx #0
+!loop:
+	lda source,x
+	sta target,x
+	lda source+$100,x
+	sta target+$100,x
+	lda source+$200,x
+	sta target+$200,x
+	lda source+40*25-$100,x
+	sta target+40*25-$100,x
+	inx
+	bne !loop-
+}
+
 clear_screen:
 	ClearScreen(SCREEN_START, ' ')
 	rts

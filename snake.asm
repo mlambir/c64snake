@@ -1,6 +1,11 @@
+BasicUpstart2(start)
+
 .import source "input.asm"
 .import source "screen_utils.asm"
+.import source "screens.asm"
+.import source "charset.asm"
 
+* = $4000 "Main Program"
 .const CHR_HEAD = $51
 .const DIR_UP = 0
 .const DIR_DOWN = 1
@@ -11,7 +16,7 @@
 .const COLOR_BORDER = 12
 .const COLOR_SNAKE = 5
 
-.const CLEAR_BYTE = ' '
+.const CLEAR_BYTE = $D1
 
 body_x: .fill 256, 0
 body_y: .fill 256, 0
@@ -22,7 +27,7 @@ head_tail_offset: .byte 0
 dir: .byte DIR_UP
 
 
-BasicUpstart2(start)
+
 
 start:
 	jmp game_start
@@ -137,7 +142,8 @@ lost:
 	jmp game_start
 
 game_start:
-	jsr clear_screen
+	jsr load_charset
+	CopyScreen(game_screen, SCREEN_START)
 	lda #12
 	sta FRAME_COLOR
 	lda #11
