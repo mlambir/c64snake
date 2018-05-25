@@ -23,6 +23,8 @@ body_y: .fill 256, 0
 head_position: .byte 0
 tail_position: .byte 0 
 head_tail_offset: .byte 0
+last_tail_x: .byte 0
+last_tail_y: .byte 0
 
 dir: .byte DIR_UP
 
@@ -39,6 +41,7 @@ wait:
 	rts
 
 advance_body:
+	//copy old position to new position
 	ldx head_position
 	ldy head_position
 	inx
@@ -48,6 +51,14 @@ advance_body:
 	lda body_y,y
 	sta body_y,x
 
+	//store last tail position
+	ldx tail_position
+	lda body_x, x
+	sta last_tail_x
+	lda body_y, x
+	sta last_tail_y
+
+	//inc tail position if offset == 0 else decrease offset
 	ldx head_tail_offset
 	cpx #0
 	bne dec_offset
@@ -141,39 +152,7 @@ check_collisions:
 lost:
 	jmp game_start
 
-game_start:
-	jsr load_charset
-	CopyScreen(game_screen, SCREEN_START)
-	lda #12
-	sta FRAME_COLOR
-	lda #11
-	sta BACKGROUND_COLOR
-	lda #0
-	sta head_position
-	stx tail_position
-	lda #20
-	sta body_x, x
-	lda #12
-	sta body_y, x
-	lda #DIR_UP
-	sta dir
-	lda #10
-	sta head_tail_offset
-game_loop:
-	jsr handle_input
-	
-	ldx tail_position
-	lda body_y, x
-	tay
-	lda body_x, x
-	tax
-	lda #CLEAR_BYTE
-	jsr draw_a_on_x_y
-
-	jsr move
-	
-	jsr check_collisions
-	
+draw_head:
 	ldx head_position
 	lda body_y, x
 	tay
@@ -183,7 +162,56 @@ game_loop:
 	jsr color_a_on_x_y
 	lda #CHR_HEAD
 	jsr draw_a_on_x_y
+	rts
 
+clear_tail:
+	//clear tail
+	ldx tail_position
+	lda body_y, x
+	cmp last_tail_y
+	bne do_clear_tail
+	lda body_x, x
+	cmp last_tail_x
+	bne do_clear_tail
+	jmp dont_clear_tail
+do_clear_tail:
+	ldx last_tail_x
+	ldy last_tail_y
+	lda #CLEAR_BYTE
+	jsr draw_a_on_x_y
+dont_clear_tail:
+	rts
+
+
+game_start:
+	jsr load_charset
+	CopyScreen(game_screen, SCREEN_START)
+	lda #12
+	sta FRAME_COLOR
+	lda #11
+	sta BACKGROUND_COLOR
+	lda #0
+	sta head_position
+	sta tail_position
+	lda #20
+	sta body_x, x
+	sta last_tail_x
+	lda #12
+	sta body_y, x
+	sta last_tail_y
+	lda #DIR_UP
+	sta dir
+	lda #5
+	sta head_tail_offset
+	
+	jsr draw_head
+
+game_loop:
+	jsr handle_input
+	jsr move
+	jsr clear_tail
+	jsr check_collisions
+	jsr draw_head
 	ldx #$55
 	jsr delay
 
