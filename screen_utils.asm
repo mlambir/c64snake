@@ -1,20 +1,33 @@
+.const FRAME_COLOR = $D020
+.const BACKGROUND_COLOR = $D021
 .const SCREEN_START = $0400
+.const COLOR_START = $d800
 
 .macro @ClearScreen(target, clearByte) {  
 	ldx #0
 	lda #clearByte
-loop:
+!loop:
 	sta target,x
 	sta target+$100,x
 	sta target+$200,x
 	sta target+40*25-$100,x
 	inx
-	bne loop
+	bne !loop-
 }
 
 clear_screen:
 	ClearScreen(SCREEN_START, ' ')
 	rts
+
+clear_color:
+	ldx #0
+!loop:
+	sta COLOR_START,x
+	sta COLOR_START+$100,x
+	sta COLOR_START+$200,x
+	sta COLOR_START+40*25-$100,x
+	inx
+	bne !loop-
 
 pos: .word $0000
 v_a: .byte 0
@@ -82,6 +95,9 @@ draw_a_on_x_y:
 	lda v_a
 	sta SCREEN_START+$0300,x
 !case_end:
+	lda v_a
+	ldx v_x
+	ldy v_y
 	rts
 
 read_x_y_to_a:
@@ -90,27 +106,64 @@ read_x_y_to_a:
 	lda pos+1
 	cmp #$05
 	bcs !case05+
-
 	ldx pos
 	lda SCREEN_START,x
-	rts	
+	jmp !case_end+
+!case05:
+	cmp #$06
+	bcs !case06+
+	ldx pos
+	lda SCREEN_START+$0100,x
+	jmp !case_end+
+!case06:
+	cmp #$07
+	bcs !case07+
+	ldx pos
+	lda SCREEN_START+$0200,x
+	jmp !case_end+
+!case07:
+	ldx pos
+	lda SCREEN_START+$0300,x
+!case_end:
+	ldx v_x
+	ldy v_y
+	rts
+
+color_a_on_x_y:
+	jsr x_y_to_pos
+
+	lda pos+1
+	cmp #$05
+	bcs !case05+
+	ldx pos
+	lda v_a
+	sta COLOR_START,x
+	jmp !case_end+
 !case05:
 	lda pos+1
 	cmp #$06
 	bcs !case06+
-
 	ldx pos
-	lda SCREEN_START+$0100,x
-	rts
+	lda v_a
+	sta COLOR_START+$0100,x
+	jmp !case_end+
 !case06:
 	lda pos+1
 	cmp #$07
 	bcs !case07+
-
 	ldx pos
-	lda SCREEN_START+$0200,x
-	rts
+	lda v_a
+	sta COLOR_START+$0200,x
+	jmp !case_end+
 !case07:
+	lda pos+1
+	cmp #$08
+	bcs !case_end+
 	ldx pos
-	lda SCREEN_START+$0300,x
+	lda v_a
+	sta COLOR_START+$0300,x
+!case_end:
+	lda v_a
+	ldx v_x
+	ldy v_y
 	rts

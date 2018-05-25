@@ -7,6 +7,10 @@
 .const DIR_LEFT = 2
 .const DIR_RIGHT = 3
 
+.const COLOR_BG = 11
+.const COLOR_BORDER = 12
+.const COLOR_SNAKE = 5
+
 .const CLEAR_BYTE = ' '
 
 body_x: .fill 256, 0
@@ -22,6 +26,7 @@ BasicUpstart2(start)
 
 start:
 	jmp game_start
+
 wait: 
 	lda #$ff 
 	cmp $d012 
@@ -125,7 +130,6 @@ check_collisions:
 	cpy #25
 	bcs lost
 	jsr read_x_y_to_a
-	sta SCREEN_START
 	cmp #CLEAR_BYTE
 	bne lost
 	rts
@@ -134,6 +138,10 @@ lost:
 
 game_start:
 	jsr clear_screen
+	lda #12
+	sta FRAME_COLOR
+	lda #11
+	sta BACKGROUND_COLOR
 	lda #0
 	sta head_position
 	stx tail_position
@@ -165,9 +173,11 @@ game_loop:
 	tay
 	lda body_x, x
 	tax
+	lda #COLOR_SNAKE
+	jsr color_a_on_x_y
 	lda #CHR_HEAD
 	jsr draw_a_on_x_y
-	
+
 	ldx #$55
 	jsr delay
 
