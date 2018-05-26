@@ -356,6 +356,8 @@ do_draw_tail:
 game_start:
 	jsr load_charset
 	CopyScreen(game_screen, SCREEN_START)
+	lda #15
+	jsr clear_color
 	lda #12
 	sta FRAME_COLOR
 	lda #11

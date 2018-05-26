@@ -43,6 +43,7 @@ clear_color:
 	sta COLOR_START+40*25-$100,x
 	inx
 	bne !loop-
+	rts
 
 pos: .word $0000
 v_a: .byte 0
