@@ -6,7 +6,7 @@ BasicUpstart2(start)
 .import source "charset.asm"
 
 * = $4000 "Main Program"
-.const CHR_HEAD = $51
+.const CHR_FRUIT = $E7
 .const CHR_HEAD_UP = $D4
 .const CHR_HEAD_DOWN = $F4
 .const CHR_HEAD_LEFT = $C4
@@ -19,10 +19,10 @@ BasicUpstart2(start)
 .const CHR_BODY_UP_RIGHT = $E5
 .const CHR_BODY_UP_LEFT = $E6
 
-.const CHR_TAIL_LEFT = $f6
-.const CHR_TAIL_RIGHT = $f5
-.const CHR_TAIL_UP = $d7
-.const CHR_TAIL_DOWN = $c7
+.const CHR_TAIL_LEFT = $F6
+.const CHR_TAIL_RIGHT = $F5
+.const CHR_TAIL_UP = $D7
+.const CHR_TAIL_DOWN = $C7
 
 
 .const DIR_UP = 0
@@ -49,10 +49,17 @@ last_tail_y: .byte 0
 last_dir: .byte DIR_UP
 dir: .byte DIR_UP
 
-
+score: .word $0000
+record: .word $0000
 
 
 start:
+	lda #$FF  //; maximum frequency value
+	sta $D40E //; voice 3 frequency low byte
+	sta $D40F //; voice 3 frequency high byte
+	lda #$80  //; noise waveform, gate bit off
+	sta $D412 //; voice 3 control register
+
 	jmp game_start
 
 wait: 
@@ -180,11 +187,48 @@ check_collisions:
 	cpy #25
 	bcs lost
 	jsr read_x_y_to_a
+	cmp #CHR_FRUIT
+	bne no_fruit
+	jsr eat_fruit
+	rts
+no_fruit:
 	cmp #CLEAR_BYTE
 	bne lost
 	rts
 lost:
 	jmp game_start
+
+eat_fruit:
+	inc head_tail_offset
+	inc score
+	beq !carry+
+	jmp !nocarry+
+!carry:
+	inc score+1
+!nocarry:
+	jsr update_record
+	jsr display_record
+	jsr display_score
+	jsr add_random_fruit
+	rts
+	
+update_record:
+	lda score+1
+	cmp record+1
+	bcc !done+
+	beq !equal+
+	jmp !larger+
+!equal:
+	lda score
+	cmp record
+	bcc !done+
+!larger:
+	lda score
+	sta record
+	lda score+1
+	sta record+1 
+!done:
+	rts
 
 draw_head:
 	ldx head_position
@@ -353,6 +397,84 @@ do_draw_tail:
 	jsr draw_a_on_x_y
 	rts
 
+rand_1_39:
+ 	lda $D41B //get random value from 0-255
+    cmp #(39 - 1 + 1)  //compare to U-L+1
+    bcs rand_1_39   //branch if value > U-L+1
+    adc #1  // add L
+    rts
+
+rand_3_24:
+ 	lda $D41B //get random value from 0-255
+    cmp #(24 - 3 +1)  //compare to U-L+1
+    bcs rand_3_24   //branch if value > U-L+1
+    adc #3  // add L
+    rts
+
+
+rand_val_x: .byte 0
+add_random_fruit:
+	jsr rand_1_39
+	tax
+	jsr rand_3_24
+	tay
+	jsr read_x_y_to_a
+	cmp #CLEAR_BYTE
+	bne add_random_fruit
+	lda #1
+	jsr color_a_on_x_y
+	lda #CHR_FRUIT
+	jsr draw_a_on_x_y
+	rts
+
+div_lo: .byte 0
+div_hi: .byte 0
+
+div10: 
+	ldx #$11 
+	lda #$00 
+	clc 
+!loop:    
+	rol 
+    cmp #$0A 
+    bcc !skip+
+    sbc #$0A 
+!skip:    
+	rol div_hi 
+	rol div_lo
+    dex 
+    bne !loop- 
+    rts
+
+display_score:
+	ldx score+1 
+	stx div_lo
+	ldy score
+	sty div_hi
+
+	ldy #$04
+!next:    
+	jsr div10 
+    ora #$30 
+    sta $042f,y 
+    dey 
+    bpl !next- 
+    rts
+
+display_record:
+	ldx record+1 
+	stx div_lo
+	ldy record
+	sty div_hi
+	ldy #$04
+!next:    
+	jsr div10 
+    ora #$30 
+    sta $044A,y 
+    dey 
+    bpl !next- 
+    rts
+
 game_start:
 	jsr load_charset
 	CopyScreen(game_screen, SCREEN_START)
@@ -375,8 +497,17 @@ game_start:
 	sta dir
 	lda #5
 	sta head_tail_offset
+
+	lda #0
+	sta score
+	sta score+1
 	
+	jsr display_score
+	jsr display_record
+
 	jsr draw_head
+
+	jsr add_random_fruit
 
 game_loop:
 	jsr handle_input
@@ -386,12 +517,13 @@ game_loop:
 	jsr draw_head
 	jsr draw_body
 	jsr draw_tail
+	
 	ldx #$55
 	jsr delay
-
+	
 	jmp game_loop
 
-
+	
 delay:
 	ldy #0
 yloop:
