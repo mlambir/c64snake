@@ -189,8 +189,8 @@ load_charset:
 	.byte	$FF, $E7, $E7, $81, $E7, $E7, $FF, $FF
 	.byte	$FF, $FF, $FF, $FF, $FF, $E7, $E7, $CF
 	.byte	$FF, $FF, $FF, $81, $FF, $FF, $FF, $FF
-	.byte	$FF, $FF, $FF, $FF, $FF, $E7, $E7, $FF
-	.byte	$FF, $FC, $F9, $F3, $E7, $CF, $9F, $FF
+	.byte	$E7, $E7, $E7, $E7, $81, $C3, $E7, $FF
+	.byte	$FF, $F7, $F3, $01, $01, $F3, $F7, $FF
 	.byte	$C3, $99, $91, $89, $99, $99, $C3, $FF
 	.byte	$E7, $E7, $C7, $E7, $E7, $E7, $81, $FF
 	.byte	$C3, $99, $F9, $F3, $CF, $9F, $81, $FF

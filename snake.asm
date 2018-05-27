@@ -93,7 +93,8 @@ start:
 	lda #%00000001
 	sta $D01A	//Enable raster interrupt signals from VIC
 
-	jmp game_start
+	jsr load_charset
+	jmp main_menu
 
 advance_body:
 	//copy old position to new position
@@ -516,8 +517,21 @@ display_record:
     rts
 
 
+main_menu:
+	lda #0
+	sta FRAME_COLOR
+	lda #11
+	sta BACKGROUND_COLOR
+	CopyScreen(main_menu_screen, SCREEN_START)
+	CopyScreen(main_menu_screen_color, COLOR_START)
+	
+	lda $c6
+	beq *-2
+	jmp game_start
+	rts
+
+
 game_start:
-	jsr load_charset
 	CopyScreen(game_screen, SCREEN_START)
 	lda #15
 	jsr clear_color
@@ -536,7 +550,7 @@ game_start:
 	sta last_tail_y
 	lda #DIR_UP
 	sta dir
-	lda #5
+	lda #4
 	sta head_tail_offset
 
 	lda #START_SPEED
