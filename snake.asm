@@ -52,21 +52,39 @@ dir: .byte DIR_UP
 score: .word $0000
 record: .word $0000
 
+timer: .word $0000
+
+timer_irq:
+	inc timer
+	beq !done+
+	inc timer+1
+!done:
+	asl $D019	//"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+	jmp $EA31
 
 start:
+	//setup rng
 	lda #$FF  //; maximum frequency value
 	sta $D40E //; voice 3 frequency low byte
 	sta $D40F //; voice 3 frequency high byte
 	lda #$80  //; noise waveform, gate bit off
 	sta $D412 //; voice 3 control register
 
-	jmp game_start
+	//setup irq
+	lda #%01111111
+	sta $DC0D	//"Switch off" interrupts signals from CIA-1
+	and $D011
+	sta $D011	//Clear most significant bit in VIC's raster register
+	lda #0
+	sta $D012	//Set the raster line number where interrupt should occur
+	lda #<timer_irq
+	sta $0314
+	lda #>timer_irq
+	sta $0315	//Set the interrupt vector to point to interrupt service routine below
+	lda #%00000001
+	sta $D01A	//Enable raster interrupt signals from VIC
 
-wait: 
-	lda #$ff 
-	cmp $d012 
-	bne wait 
-	rts
+	jmp game_start
 
 advance_body:
 	//copy old position to new position
@@ -475,12 +493,26 @@ display_record:
     bpl !next- 
     rts
 
+display_timer:
+	ldx timer+1 
+	stx div_lo
+	ldy timer
+	sty div_hi
+	ldy #$04
+!next:    
+	jsr div10 
+    ora #$30 
+    sta $0400,y 
+    dey 
+    bpl !next- 
+    rts
+
 game_start:
 	jsr load_charset
 	CopyScreen(game_screen, SCREEN_START)
 	lda #15
 	jsr clear_color
-	lda #12
+	lda #0
 	sta FRAME_COLOR
 	lda #11
 	sta BACKGROUND_COLOR
@@ -510,6 +542,8 @@ game_start:
 	jsr add_random_fruit
 
 game_loop:
+	jsr display_timer
+
 	jsr handle_input
 	jsr move
 	jsr clear_tail
@@ -525,10 +559,10 @@ game_loop:
 
 	
 delay:
-	ldy #0
-yloop:
-	dey
-	bne yloop
-	dex
-	bne delay
+	ldx timer+1
+	cpx #15
+	bcc delay
+	ldx #0
+	stx timer
+	stx timer+1
 	rts
