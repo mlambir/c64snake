@@ -67,6 +67,7 @@ timer_irq:
 	beq !done+
 	inc timer+1
 !done:
+	jsr handle_input
 	asl $D019	//"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
 	jmp $EA31
 
@@ -556,7 +557,6 @@ game_start:
 	jsr add_random_fruit
 
 game_loop:
-	jsr handle_input
 	jsr move
 	jsr clear_tail
 	jsr check_collisions
