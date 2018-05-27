@@ -54,6 +54,14 @@ record: .word $0000
 
 timer: .word $0000
 
+
+.const FRUIT_COUNT_TO_SPEEDUP = 4
+.const START_SPEED = 10
+.const MIN_SPEED = 2
+
+speedup_counter: .byte 0
+timer_counter: .byte 0
+
 timer_irq:
 	inc timer
 	beq !done+
@@ -228,6 +236,19 @@ eat_fruit:
 	jsr display_record
 	jsr display_score
 	jsr add_random_fruit
+
+	ldx speedup_counter
+	dex
+	stx speedup_counter
+	bne !nospeedup+
+
+	ldx #FRUIT_COUNT_TO_SPEEDUP
+	stx speedup_counter
+	ldx timer_counter
+	cpx #MIN_SPEED + 1
+	bcc !nospeedup+
+	dec timer_counter
+!nospeedup:
 	rts
 	
 update_record:
@@ -493,19 +514,6 @@ display_record:
     bpl !next- 
     rts
 
-display_timer:
-	ldx timer+1 
-	stx div_lo
-	ldy timer
-	sty div_hi
-	ldy #$04
-!next:    
-	jsr div10 
-    ora #$30 
-    sta $0400,y 
-    dey 
-    bpl !next- 
-    rts
 
 game_start:
 	jsr load_charset
@@ -530,6 +538,12 @@ game_start:
 	lda #5
 	sta head_tail_offset
 
+	lda #START_SPEED
+	sta timer_counter
+
+	lda #FRUIT_COUNT_TO_SPEEDUP
+	sta speedup_counter
+
 	lda #0
 	sta score
 	sta score+1
@@ -542,8 +556,6 @@ game_start:
 	jsr add_random_fruit
 
 game_loop:
-	jsr display_timer
-
 	jsr handle_input
 	jsr move
 	jsr clear_tail
@@ -552,15 +564,12 @@ game_loop:
 	jsr draw_body
 	jsr draw_tail
 	
-	ldx #$55
 	jsr delay
 	
 	jmp game_loop
-
-	
 delay:
 	ldx timer+1
-	cpx #15
+	cpx timer_counter
 	bcc delay
 	ldx #0
 	stx timer
